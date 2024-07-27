@@ -1,0 +1,15 @@
+
+[placeholder]:empty::before 
+    content attr(placeholder)
+    color #7bF
+
+field-changed()
+  font-weight:bold
+
+.bp-field-changed
+  input
+    field-changed()
+
+label.bp-field-changed
+  span
+    field-changed()
