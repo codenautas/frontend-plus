@@ -128,7 +128,7 @@ export function MenuH(props:{title:string, rightTitle?:string, mobile:boolean, o
     </>
 }
 
-function ifNotNullApply<T,U>(value:T|null,f:((value:T) => U)):U|null{
+export function ifNotNullApply<T,U>(value:T|null,f:((value:T) => U)):U|null{
     return value == null ? null : f(value)
 }
 
@@ -197,10 +197,10 @@ export function ComboBox(props:{
     </Select>
 }
 
-type FieldTypes = null|string|boolean|number|BestGlobals.RealDate
-type RowType = Record<string, FieldTypes>
+export type FieldTypes = null|string|boolean|number|BestGlobals.RealDate
+export type RowType = Record<string, FieldTypes>
 
-export function CardEditor(props:{updatesToRow:RowType, originalRow:RowType, onRowChange: (row:RowType)=>void, tableDef:TableDefinition, lists:(name:string, row:RowType)=>string[], forEdit:boolean,
+export function VerticalCardEditor(props:{updatesToRow:RowType, originalRow:RowType, onRowChange: (row:RowType)=>void, tableDef:TableDefinition, lists:(name:string, row:RowType)=>string[], forEdit:boolean,
     mobile:boolean
 }){
     const {updatesToRow, originalRow, tableDef, lists, mobile} = props;
@@ -302,8 +302,13 @@ export function CardEditor(props:{updatesToRow:RowType, originalRow:RowType, onR
 
 type OptionsInfo = {chained?: RowType, relations?:Record<string, string[]>}
 
-export function CardEditorConnected(props:{table:string, fixedFields:RowType, conn:Connector}){
-    const {table, fixedFields, conn} = props;
+export function CardEditorConnected(props:{
+    table:string, fixedFields:RowType, conn:Connector,
+    CardEditor:(props:{updatesToRow:RowType, originalRow:RowType, onRowChange: (row:RowType)=>void, tableDef:TableDefinition, lists:(name:string, row:RowType)=>string[], forEdit:boolean,
+        mobile:boolean
+    }) => JSX.Element    
+}){
+    const {table, fixedFields, conn, CardEditor} = props;
     const fakeTableDef = {
         name: table,
         fields:[
@@ -484,7 +489,40 @@ class CaptureError extends React.Component<
     }
 }
 
+export function renderConnectedApp(
+    conn:Connector,
+    addrParams:AddrParams,
+    layout: HTMLElement,
+    ConnectedApp: (props:{table: string, fixedFields:RowType, conn:Connector}) => JSX.Element
+){
+    layout.innerHTML="";
+    if (addrParams.ff instanceof Array) {
+        var fixedFields:any = addrParams.ff;
+    } else {
+        var fixedFields:any = likeAr(addrParams.ff).map(function(value, key){ return {fieldName:key, value:value}; }).array();
+    }
+    if (!conn.ajax.option_lists) {
+        throw new Error("falta conn.ajax.option_lists en renderCardEditor");
+    }
+    ReactDOM.render(
+        <CaptureError>
+            <ConnectedApp table={addrParams.table} fixedFields={fixedFields} conn={conn}/>
+        </CaptureError>,
+        document.getElementById('total-layout')
+    )
+}
+
 export function renderCardEditor(
+    conn:Connector,
+    addrParams:AddrParams,
+    layout: HTMLElement
+){
+    renderConnectedApp(conn, addrParams, layout, 
+        ({table, fixedFields, conn}) => CardEditorConnected({table, fixedFields, conn, CardEditor:VerticalCardEditor})
+    )
+}
+
+export function renderCardEditorLegacy(
     conn:Connector,
     addrParams:AddrParams,
     layout: HTMLElement
@@ -500,7 +538,7 @@ export function renderCardEditor(
     }
     ReactDOM.render(
         <CaptureError>
-            <CardEditorConnected table={addrParams.table} fixedFields={fixedFields} conn={conn}/>
+            <CardEditorConnected table={addrParams.table} fixedFields={fixedFields} conn={conn} CardEditor={VerticalCardEditor}/>
         </CaptureError>,
         document.getElementById('total-layout')
     )
