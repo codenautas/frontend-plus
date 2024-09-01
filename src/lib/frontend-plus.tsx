@@ -302,13 +302,116 @@ export function VerticalCardEditor(props:{updatesToRow:RowType, originalRow:RowT
 
 type OptionsInfo = {chained?: RowType, relations?:Record<string, string[]>}
 
+export type GenericFieldProperties = {
+    fd:FieldDefinition, value:any, forEdit:boolean, originalValue:any, isValueUpdated:boolean,
+    mobile:boolean, makeChange:(value:any)=>void, getOptions:()=>any[]
+}
+
+export function GenericField(props:GenericFieldProperties){
+    const variant = "standard";
+    var {fd, value, originalValue, isValueUpdated, mobile, makeChange} = props;
+    const {name, typeName, title, allow} = fd;
+    const editable = !!allow?.update && props.forEdit;
+    const key = "renglon-" + name;
+    const toolTip = isValueUpdated ? 'ANTES: ' + originalValue : '';
+    const classUpdated = isValueUpdated ? "bp-field-changed" : "bp-field-unchanged"
+    switch (typeName) {
+        case 'boolean':
+            return <FormControlLabel control={
+                <Checkbox 
+                    key={key} 
+                    checked={!!value}
+                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                        makeChange(event.target.checked);
+                    }}
+                    disabled={!editable}
+                    name={title} 
+                />
+            } label={name}
+            className={`fp-fieldname-${name} ${classUpdated}`}
+            />;
+        case 'date':
+            return <TextField 
+                key={key} 
+                className={`fp-fieldname-${name} ${classUpdated}`}
+                value={value == null ? '' : (value as BestGlobals.RealDate)?.toYmd?.()}
+                onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                    makeChange(ifNotNullApply(event.target.value, BestGlobals.date.iso));
+                }}
+                type="date" 
+                InputLabelProps={{ shrink: true }} 
+                label={title} 
+                disabled={!editable}
+                title={toolTip}
+                variant={variant} 
+            />
+        case 'decimal':
+        case 'bigint':
+            return <TextField 
+                key={key} 
+                className={`fp-fieldname-${name} ${classUpdated}`}
+                value={value == null ? '' : value}
+                onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                    makeChange(ifNotNullApply(event.target.value, Number));
+                }}
+                type="number" 
+                InputLabelProps={{ shrink: value != null }} 
+                label={title} 
+                disabled={!editable}
+                title={toolTip}
+                variant={variant} 
+            />
+        default: 
+            if (typeName == 'text' && editable) {
+                const options = props.getOptions()
+                if (value != null && !options.includes(value)) { options.unshift(value) }
+                return <ComboBox 
+                    key={key}
+                    className={`fp-fieldname-${name} ${classUpdated}`}
+                    value={value as string}
+                    onChange={(value: string|null) => {
+                        makeChange(value);
+                    }}
+                    valueOfNull={!fd.nullable && fd.allowEmptyText ? '' : null}
+                    options={options}
+                    label={title!}
+                    disabled={!editable}
+                    freeSolo={!fd.references}
+                    variant={variant}
+                    title={toolTip}
+                    mobile={mobile}
+                />
+            } else {
+                return <TextField 
+                    key={key}
+                    className={`fp-fieldname-${name} ${classUpdated}`}
+                    value={value as string}
+                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                        makeChange(ifNotNullApply(event.target.value, Number));
+                    }}
+                    label={title!}
+                    disabled={!editable}
+                    variant={variant}
+                    title={toolTip}
+                />
+            }
+    }
+}
+
+export function CardVerticalDisplay(props:{fieldsProps:GenericFieldProperties[]}){
+    const {fieldsProps} = props;
+    return <>
+        {fieldsProps.map(props =>
+            <GenericField {...props}/>
+        )}
+    </>
+}
+
 export function CardEditorConnected(props:{
     table:string, fixedFields:RowType, conn:Connector,
-    CardEditor:(props:{updatesToRow:RowType, originalRow:RowType, onRowChange: (row:RowType)=>void, tableDef:TableDefinition, lists:(name:string, row:RowType)=>string[], forEdit:boolean,
-        mobile:boolean
-    }) => JSX.Element    
+    CardDisplay:(props:{fieldsProps:GenericFieldProperties[]}) => JSX.Element
 }){
-    const {table, fixedFields, conn, CardEditor} = props;
+    const {table, fixedFields, conn, CardDisplay} = props;
     const fakeTableDef = {
         name: table,
         fields:[
@@ -437,9 +540,8 @@ export function CardEditorConnected(props:{
             noValidate
             autoComplete="off"
         >
-            <CardEditor updatesToRow={updatesToRow} originalRow={originalRow} tableDef={tableDef} lists={lists} forEdit={!saving}
-                mobile={mobile}
-                onRowChange={function(row){
+            {(()=>{
+                const onRowChange=function(row:RowType){
                     setChangeCount(x => x+1)
                     var dirty = false;
                     for (var _ in row) {
@@ -449,7 +551,29 @@ export function CardEditorConnected(props:{
                     setDirty(dirty);
                     setUpdatesToRow(row);
                 }
-            }/>
+                const forEdit = !saving;
+                const fieldsDef = tableDef.fields; 
+                const newRow = {...originalRow, ...updatesToRow};
+                console.log('=============')
+                console.log(JSON.stringify(newRow))
+                var fieldsProps = fieldsDef.map((fd) => { 
+                    var {name} = fd;
+                    const makeChange = (newValue: any) => {
+                        var newUpdatesToRow = {...updatesToRow}
+                        if (BestGlobals.sameValue(newValue, originalRow[name] ?? null)){
+                            delete newUpdatesToRow[name];
+                        } else {
+                            newUpdatesToRow[name] = newValue;
+                        }
+                        onRowChange(newUpdatesToRow);
+                    }
+                    const isValueUpdated = name in updatesToRow;
+                    const value = (isValueUpdated ? updatesToRow[name] : originalRow[name]) ?? null;
+                    const originalValue = originalRow[name] ?? null;
+                    return {fd, value, forEdit, originalValue, isValueUpdated, mobile, makeChange, getOptions:()=>lists(name, newRow) ?? []}
+                });
+                return <CardDisplay fieldsProps={fieldsProps}/>
+            })()}
             <Button 
                 key={"$ button save"}
                 startIcon={saving ? <CircularProgress size={20} /> : <ICON.Save/>} 
@@ -518,7 +642,7 @@ export function renderCardEditor(
     layout: HTMLElement
 ){
     renderConnectedApp(conn, addrParams, layout, 
-        ({table, fixedFields, conn}) => CardEditorConnected({table, fixedFields, conn, CardEditor:VerticalCardEditor})
+        ({table, fixedFields, conn}) => CardEditorConnected({table, fixedFields, conn, CardDisplay:CardVerticalDisplay})
     )
 }
 
@@ -538,7 +662,7 @@ export function renderCardEditorLegacy(
     }
     ReactDOM.render(
         <CaptureError>
-            <CardEditorConnected table={addrParams.table} fixedFields={fixedFields} conn={conn} CardEditor={VerticalCardEditor}/>
+            <CardEditorConnected table={addrParams.table} fixedFields={fixedFields} conn={conn} CardDisplay={CardVerticalDisplay}/>
         </CaptureError>,
         document.getElementById('total-layout')
     )
