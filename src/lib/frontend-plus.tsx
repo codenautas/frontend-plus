@@ -300,7 +300,7 @@ export function VerticalCardEditor(props:{updatesToRow:RowType, originalRow:RowT
     </>
 }
 
-type OptionsInfo = {chained?: RowType, relations?:Record<string, string[]>}
+export type OptionsInfo = {chained?: RowType, relations?:Record<string, string[]>, tables?:Record<string, Record<string, RowType>>}
 
 export type GenericFieldProperties = {
     fd:FieldDefinition, value:any, forEdit:boolean, originalValue:any, isValueUpdated:boolean,
@@ -325,9 +325,9 @@ export function GenericField(props:GenericFieldProperties){
                         makeChange(event.target.checked);
                     }}
                     disabled={!editable}
-                    name={title} 
+                    name={name} 
                 />
-            } label={name}
+            } label={title}
             className={`fp-fieldname-${name} ${classUpdated}`}
             />;
         case 'date':
@@ -409,7 +409,7 @@ export function CardVerticalDisplay(props:{fieldsProps:GenericFieldProperties[]}
 
 export function CardEditorConnected(props:{
     table:string, fixedFields:RowType, conn:Connector,
-    CardDisplay:(props:{fieldsProps:GenericFieldProperties[]}) => JSX.Element
+    CardDisplay:(props:{fieldsProps:GenericFieldProperties[], optionsInfo:OptionsInfo}) => JSX.Element
 }){
     const {table, fixedFields, conn, CardDisplay} = props;
     const fakeTableDef = {
@@ -422,7 +422,7 @@ export function CardEditorConnected(props:{
     const [updatesToRow, setUpdatesToRow] = useState<RowType>({});
     const [rows, setRows] = useState<RowType[]>([]);
     const [originalRow, setOriginalRow] = useState<RowType>({});
-    const [optionsInfo, setOptionsInfo] = useState<OptionsInfo>({chained: {}, relations: {}});    
+    const [optionsInfo, setOptionsInfo] = useState<OptionsInfo>({chained: {}, relations: {}, tables:{}});    
     const [dirty, setDirty] = useState(false);
     const [error, setError] = useState<Error|null>(null);
     const [saving, setSaving] = useState(false);
@@ -572,7 +572,7 @@ export function CardEditorConnected(props:{
                     const originalValue = originalRow[name] ?? null;
                     return {fd, value, forEdit, originalValue, isValueUpdated, mobile, makeChange, getOptions:()=>lists(name, newRow) ?? []}
                 });
-                return <CardDisplay fieldsProps={fieldsProps}/>
+                return <CardDisplay fieldsProps={fieldsProps} optionsInfo={optionsInfo}/>
             })()}
             <Button 
                 key={"$ button save"}
