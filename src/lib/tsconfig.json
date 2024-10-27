@@ -3,7 +3,13 @@
         "outDir": "../../dist/lib",
         "typeRoots" : ["node_modules/@types"],
         "lib": ["dom", "ES2023"],
-        "jsx": "react"
+        "jsx": "react",
+        "noImplicitAny": true,
+        "strictBindCallApply": true,
+        "strictBuiltinIteratorReturn": true,
+        "strictFunctionTypes": true,
+        "strictNullChecks": true,
+        "strictPropertyInitialization": true
     },
     "include":[
         "."

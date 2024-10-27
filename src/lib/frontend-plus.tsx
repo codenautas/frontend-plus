@@ -11,7 +11,7 @@ import {
     Checkbox, CircularProgress,
     FormControl, FormControlLabel,
     IconButton,
-    List, ListItem, ListItemText, 
+    List, ListItemButton, ListItemText, 
     MenuItem, 
     Select, SvgIcon, SwipeableDrawer, 
     TextField, TextFieldVariants, Toolbar, Typography,
@@ -42,16 +42,16 @@ export interface TableDefinition {
 }
 
 export type RecordStatus = 'new'|'update' 
-
+export type FixedFields = {fieldName:string, value:any}[]
 export interface BEAPI {
     table_structure: (params:{
         table: string
     }) => Promise<TableDefinition>
-    table_data: (params:{
+    table_data: <T extends RowType>(params:{
         table: string, 
-        fixedFields: RowType, 
+        fixedFields: FixedFields, 
         paramfun: {}
-    }) => Promise<RowType[]>
+    }) => Promise<T[]>
     table_record_save: (params:{
         table: string, 
         primaryKeyValues: any[], 
@@ -111,7 +111,7 @@ export function MenuH(props:{title:string, rightTitle?:string, mobile:boolean, o
                 onKeyDown={()=>setMenuOpened(false)}
             >
                 <List>
-                    <ListItem button 
+                    <ListItemButton 
                         onClick={()=>{
                             setMenuOpened(false);
                         }}
@@ -121,7 +121,7 @@ export function MenuH(props:{title:string, rightTitle?:string, mobile:boolean, o
                                 window.location.href="./login"
                             }}
                         />
-                    </ListItem>
+                    </ListItemButton>
                </List>
             </div>
         </SwipeableDrawer>
@@ -408,7 +408,7 @@ export function CardVerticalDisplay(props:{fieldsProps:GenericFieldProperties[]}
 }
 
 export function CardEditorConnected(props:{
-    table:string, fixedFields:RowType, conn:Connector,
+    table:string, fixedFields:FixedFields, conn:Connector,
     CardDisplay:(props:{fieldsProps:GenericFieldProperties[], optionsInfo:OptionsInfo}) => JSX.Element
 }){
     const {table, fixedFields, conn, CardDisplay} = props;
@@ -617,13 +617,13 @@ export function renderConnectedApp(
     conn:Connector,
     addrParams:AddrParams,
     layout: HTMLElement,
-    ConnectedApp: (props:{table: string, fixedFields:RowType, conn:Connector}) => JSX.Element
+    ConnectedApp: (props:{table: string, fixedFields:FixedFields, conn:Connector}) => JSX.Element
 ){
     layout.innerHTML="";
     if (addrParams.ff instanceof Array) {
-        var fixedFields:any = addrParams.ff;
+        var fixedFields:FixedFields = addrParams.ff;
     } else {
-        var fixedFields:any = likeAr(addrParams.ff).map(function(value, key){ return {fieldName:key, value:value}; }).array();
+        var fixedFields:FixedFields = likeAr(addrParams.ff).map(function(value, key){ return {fieldName:key, value:value}; }).array();
     }
     if (!conn.ajax.option_lists) {
         throw new Error("falta conn.ajax.option_lists en renderCardEditor");
