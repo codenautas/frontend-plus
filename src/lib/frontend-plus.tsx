@@ -409,9 +409,10 @@ export function CardVerticalDisplay(props:{fieldsProps:GenericFieldProperties[]}
 
 export function CardEditorConnected(props:{
     table:string, fixedFields:FixedFields, conn:Connector,
+    withMenu?:boolean,
     CardDisplay:(props:{fieldsProps:GenericFieldProperties[], optionsInfo:OptionsInfo}) => JSX.Element
 }){
-    const {table, fixedFields, conn, CardDisplay} = props;
+    const {table, fixedFields, conn, withMenu, CardDisplay} = props;
     const fakeTableDef = {
         name: table,
         fields:[
@@ -512,7 +513,7 @@ export function CardEditorConnected(props:{
         return result;
     }
     return <>
-        <MenuH title="Renglón" rightTitle={(changeCount || '').toString()} mobile={mobile} onMobile={setMobile}/>
+        {withMenu ? <MenuH title="Renglón" rightTitle={(changeCount || '').toString()} mobile={mobile} onMobile={setMobile}/> : null }
         <div style={{display: error == null ? "none" : "unset"}}>
             <Alert icon={<ICON.ErrorOutlineRounded/>} severity="error">
             {error?.message}
