@@ -144,7 +144,7 @@ type ForkeableLinkProps = {
     onClick?: (event: React.MouseEvent<HTMLAnchorElement>) => void;
     addrParams: any;
     conn: any;
-    ConnectedApp: (props: { table: string; fixedFields: RowType; conn: Connector; }) => JSX.Element
+    ConnectedApp: (props: { table: string; fixedFields: FixedFields; conn: Connector; mode: TypeMode }) => JSX.Element
 };
 
 export function ForkeableButton({
