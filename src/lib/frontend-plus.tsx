@@ -134,6 +134,107 @@ export function ifNotNullApply<T,U>(value:T|null,f:((value:T) => U)):U|null{
     return value == null ? null : f(value)
 }
 
+type ForkeableLinkProps = {
+    href: string;
+    label: string;
+    className?: string;
+    disabled?: boolean;
+    preOnClick?: () => string | null;
+    updateHrefBeforeClick?: (event: React.MouseEvent<HTMLAnchorElement>) => void;
+    onClick?: (event: React.MouseEvent<HTMLAnchorElement>) => void;
+    addrParams: any;
+    conn: any;
+    ConnectedApp: (props: { table: string; fixedFields: RowType; conn: Connector; }) => JSX.Element
+};
+
+export function ForkeableButton({
+    href,
+    label,
+    className,
+    disabled = false,
+    preOnClick,
+    updateHrefBeforeClick,
+    onClick,
+    addrParams,
+    conn,
+    ConnectedApp,
+}: ForkeableLinkProps) {
+    //@ts-ignore
+    const [isDisabled, setIsDisabled] = useState(disabled);
+
+    const handleClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+        if (updateHrefBeforeClick) {
+            updateHrefBeforeClick(event);
+        }
+
+        if (isDisabled) {
+            event.preventDefault();
+            return;
+        }
+
+        const errorText = preOnClick ? preOnClick() : null;
+        if (errorText) {
+            console.log(errorText);
+            event.preventDefault();
+            return;
+        }
+
+        if (!event.ctrlKey && event.button !== 1) {
+            event.preventDefault();
+
+            const hash = href.split("#")[1] ?? "";
+            const hashParams = parseHashParams(hash);
+
+            const newAddrParams = {
+                ...addrParams,
+                ff: Object.keys(hashParams).map(key => ({
+                    fieldName: key,
+                    value: hashParams[key]
+                }))
+            };
+
+            history.pushState(null, '', href);
+
+            const rootElement = document.getElementById('total-layout');
+            if (rootElement) {
+                //la unica razon por la que esto funcionaria, pero no esta nada bien hacerlo
+                ReactDOM.unmountComponentAtNode(rootElement);
+                renderConnectedApp(conn, newAddrParams, rootElement, ConnectedApp);
+            }
+        }
+
+        if (onClick) {
+            onClick(event);
+        }
+    };
+
+    return (
+        <a
+            href={href}
+            className={className || 'fp-link-button'}
+            onClick={handleClick}
+            style={{ pointerEvents: isDisabled ? 'none' : 'auto', cursor: isDisabled ? 'not-allowed' : 'pointer' }}
+        >
+            {label}
+        </a>
+    );
+}
+
+function parseHashParams(hash: string): Record<string, any> {
+    const params = hash.substring(1).split('&');
+    const result: Record<string, any> = {};
+
+    params.forEach(param => {
+        const [key, value] = param.split('=');
+        if (key) {
+            result[key] = decodeURIComponent(value);
+        }
+    });
+
+    return result;
+}
+
+
 export function ComboBox(props:{
     key: string, value: string|null, valueOfNull: string|null, onChange: (newValue:null|string)=>void
     options: string[], label: string, freeSolo: boolean, disabled: boolean, helperText?: string, variant?:TextFieldVariants,
