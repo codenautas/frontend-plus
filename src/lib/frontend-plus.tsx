@@ -41,6 +41,7 @@ export interface TableDefinition {
     primaryKey: string[]
 }
 
+export type TypeMode = 'insert'|'update'
 export type RecordStatus = 'new'|'update' 
 export type FixedFields = {fieldName:string, value:any}[]
 export interface BEAPI {
@@ -70,6 +71,7 @@ export interface Connector {
 
 export interface AddrParams {
     table: string
+    mode: TypeMode
     ff: Record<string, any> | {fieldName:string, value:any}[]
 }
 
@@ -408,10 +410,10 @@ export function CardVerticalDisplay(props:{fieldsProps:GenericFieldProperties[]}
 }
 
 export function CardEditorConnected(props:{
-    table:string, fixedFields:FixedFields, conn:Connector,
+    table:string, fixedFields:FixedFields, conn:Connector, mode:TypeMode,
     CardDisplay:(props:{fieldsProps:GenericFieldProperties[], optionsInfo:OptionsInfo}) => JSX.Element
 }){
-    const {table, fixedFields, conn, CardDisplay} = props;
+    const {table, fixedFields, conn, mode, CardDisplay} = props;
     const fakeTableDef = {
         name: table,
         fields:[
@@ -430,7 +432,7 @@ export function CardEditorConnected(props:{
     const [message, setMessage] = useState("");
     const [position, setPosition] = useState<number|null>(1);
     const [count, setCount] = useState(0);
-    const [status, setStatus] = useState<RecordStatus>('update');
+    const [status, setStatus] = useState<RecordStatus>(mode == 'insert' ? 'new' : 'update');
     const [mobile, setMobile] = useState(window.navigator.maxTouchPoints > 2);
     const [changeCount, setChangeCount] = useState(0);
     const getPrimaryKeyValues = (tableDef:TableDefinition, row:RowType) => tableDef.primaryKey.map(fn => row[fn]);
@@ -443,7 +445,7 @@ export function CardEditorConnected(props:{
         }
         const pos = status == 'new' ? rows.length + 1 : position == null ? 1 : position > rows.length ? rows.length : position < 1 ? 1 : position;
         setPosition(pos);
-        const row = status == 'new' ? beingArray(tableDef.fields).build(fd => ({[fd.name]:null})).plain() : rows[pos - 1];
+        const row = status == 'new'|| mode == 'insert' ? beingArray(tableDef.fields).build(fd => ({[fd.name]:null})).plain() : rows[pos - 1];
         if (status == 'new') {
             setRows([...rows, row]);
         } else {
@@ -526,10 +528,14 @@ export function CardEditorConnected(props:{
             noValidate
             autoComplete="off"
         >
+            {mode != 'insert' && (
+            <>
             <Button disabled = { dirty || status == 'new' || count <= 1} onClick={_ =>{ setRowsAndPosition(tableDef, rows, position && position - 1, 'update')} }><ICON.KeyboardArrowUp/></Button>
             <Typography>{position == null ? 'NO' : position + '/' + count }</Typography>
             <Button disabled = { dirty || status == 'new' || count <= 1} onClick={_ =>{ setRowsAndPosition(tableDef, rows, position && position + 1, 'update')} }><ICON.KeyboardArrowDown/></Button>
             <Button disabled = { dirty || status == 'new' } title={"Agregar"} onClick={_ =>{ setRowsAndPosition(tableDef, rows, null, 'new')} }><ICON.AddCircleOutlineRounded/></Button>
+            </>
+            )}
         </FormControl>
         <FormControl
             key={JSON4all.toUrl(primaryKeyValues)}
@@ -617,7 +623,7 @@ export function renderConnectedApp(
     conn:Connector,
     addrParams:AddrParams,
     layout: HTMLElement,
-    ConnectedApp: (props:{table: string, fixedFields:FixedFields, conn:Connector}) => JSX.Element
+    ConnectedApp: (props:{table: string, fixedFields:FixedFields, conn:Connector, mode:TypeMode}) => JSX.Element
 ){
     layout.innerHTML="";
     if (addrParams.ff instanceof Array) {
@@ -630,7 +636,7 @@ export function renderConnectedApp(
     }
     ReactDOM.render(
         <CaptureError>
-            <ConnectedApp table={addrParams.table} fixedFields={fixedFields} conn={conn}/>
+            <ConnectedApp table={addrParams.table} fixedFields={fixedFields} conn={conn} mode={addrParams.mode}/>
         </CaptureError>,
         document.getElementById('total-layout')
     )
@@ -642,7 +648,7 @@ export function renderCardEditor(
     layout: HTMLElement
 ){
     renderConnectedApp(conn, addrParams, layout, 
-        ({table, fixedFields, conn}) => CardEditorConnected({table, fixedFields, conn, CardDisplay:CardVerticalDisplay})
+        ({table, fixedFields, conn, mode}) => CardEditorConnected({table, fixedFields, conn, mode, CardDisplay:CardVerticalDisplay})
     )
 }
 
@@ -662,7 +668,7 @@ export function renderCardEditorLegacy(
     }
     ReactDOM.render(
         <CaptureError>
-            <CardEditorConnected table={addrParams.table} fixedFields={fixedFields} conn={conn} CardDisplay={CardVerticalDisplay}/>
+            <CardEditorConnected table={addrParams.table} fixedFields={fixedFields} conn={conn} mode={addrParams.mode} CardDisplay={CardVerticalDisplay}/>
         </CaptureError>,
         document.getElementById('total-layout')
     )
