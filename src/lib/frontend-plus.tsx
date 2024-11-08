@@ -234,10 +234,11 @@ function parseHashParams(hash: string): Record<string, any> {
     return result;
 }
 
+type OptionSelect = { labels: string[], value: any}
 
 export function ComboBox(props:{
     key: string, value: string|null, valueOfNull: string|null, onChange: (newValue:null|string)=>void
-    options: string[], label: string, freeSolo: boolean, disabled: boolean, helperText?: string, variant?:TextFieldVariants,
+    options: OptionSelect[], label: string, freeSolo: boolean, disabled: boolean, helperText?: string, variant?:TextFieldVariants,
     className?:string, title?:string, mobile:boolean
     // sx?:SxProps<Theme>, inputProps?:InputBaseComponentProps
 }){
@@ -246,7 +247,14 @@ export function ComboBox(props:{
         mobile
         // sx, inputProps, 
     } = props
-    var checkError = (value:string|null) => !freeSolo && !options.includes(value as string);
+    console.log(JSON.stringify(props))
+
+    const optionsConcatLabels = options.map(option => ({
+        label: Array.isArray(option.labels) ? option.labels.join(" - ") : String(option.labels || ""),
+        value: option.value !== undefined ? option.value : ""
+    }));
+    // lo comento momentaneamente
+    // var checkError = (value:string|null) => !freeSolo && !options.includes(value as string);
     return !mobile || mobileKeyboardEditing ? <Autocomplete 
         disablePortal
         key={key}
@@ -267,7 +275,7 @@ export function ComboBox(props:{
         options={options}
         renderInput={(params) => <TextField {...params}
             required={true} 
-            error={checkError(value)} 
+            // error={checkError(value)} 
             label={label} 
             InputLabelProps={{shrink: value != null}}
             variant={variant}
@@ -291,19 +299,20 @@ export function ComboBox(props:{
         variant={variant}
         className={className}
         required={true} 
-        error={checkError(value)} 
+        // error={checkError(value)} 
         disabled={disabled}
         title={title}
     >
         <MenuItem key={"$ keyboard $$$$!"} value={""}><ICON.KeyboardHideRounded/></MenuItem>
-        {options.map((o,i)=> <MenuItem key={o+"$$$$$"+i} value={o} disabled={o == SEPARATOR_STR}>{o}</MenuItem>)}
+        {optionsConcatLabels.map((o,i)=> <MenuItem key={o.value+"$$$$$"+i} value={o.value}>{o.label}</MenuItem>)}
+        {/* {options.map((o,i)=> <MenuItem key={o+"$$$$$"+i} value={o} disabled={o == SEPARATOR_STR}>{o}</MenuItem>)} */}
     </Select>
 }
 
 export type FieldTypes = null|string|boolean|number|BestGlobals.RealDate
 export type RowType = Record<string, FieldTypes>
 
-export function VerticalCardEditor(props:{updatesToRow:RowType, originalRow:RowType, onRowChange: (row:RowType)=>void, tableDef:TableDefinition, lists:(name:string, row:RowType)=>string[], forEdit:boolean,
+export function VerticalCardEditor(props:{updatesToRow:RowType, originalRow:RowType, onRowChange: (row:RowType)=>void, tableDef:TableDefinition, lists:(name:string, row:RowType)=>OptionSelect[], forEdit:boolean,
     mobile:boolean
 }){
     const {updatesToRow, originalRow, tableDef, lists, mobile} = props;
@@ -382,6 +391,7 @@ export function VerticalCardEditor(props:{updatesToRow:RowType, originalRow:RowT
                     const options = lists(name, newRow) ?? [];
                     // @ts-expect-error value can be not string
                     if (value != null && !options.includes(value)) { options.unshift(value) }
+                    
                     return <ComboBox 
                         key={key}
                         value={value as string}
@@ -407,13 +417,13 @@ export type OptionsInfo = {chained?: RowType, relations?:Record<string, string[]
 
 export type GenericFieldProperties = {
     fd:FieldDefinition, value:any, forEdit:boolean, originalValue:any, isValueUpdated:boolean,
-    mobile:boolean, makeChange:(value:any)=>void, getOptions:()=>any[]
+    mobile:boolean, makeChange:(value:any)=>void, getOptions:(labelFields?: string[])=>any[], labelFields?: string[] 
 }
 
 export function GenericField(props:GenericFieldProperties){
     console.log('genericfield', JSON.stringify(props))
     const variant = "standard";
-    var {fd, value, originalValue, isValueUpdated, mobile, makeChange} = props;
+    var {fd, value, originalValue, isValueUpdated, mobile, makeChange, labelFields} = props;
     const {name, typeName, title, allow} = fd;
     const editable = !!allow?.update && props.forEdit;
     const key = "renglon-" + name;
@@ -467,8 +477,9 @@ export function GenericField(props:GenericFieldProperties){
             />
         default: 
             if (typeName == 'text' && editable) {
-                const options = props.getOptions()
+                const options = props.getOptions(labelFields)
                 if (value != null && !options.includes(value)) { options.unshift(value) }
+                console.log('options', JSON.stringify(options))
                 return <ComboBox 
                     key={key}
                     className={`fp-fieldname-${name} ${classUpdated}`}
@@ -551,8 +562,6 @@ export function CardEditorConnected(props:{
         }
         const pos = status == 'new' ? rows.length + 1 : position == null ? 1 : position > rows.length ? rows.length : position < 1 ? 1 : position;
         setPosition(pos);
-        console.log('----------------beingarray')
-        console.log(JSON.stringify(beingArray(tableDef.fields).build(fd => ({[fd.name]:null})).plain()))
         const row = status == 'new' || mode == 'insert'? beingArray(tableDef.fields).build(fd => ({[fd.name]:null})).plain() : rows[pos - 1];
         if (status == 'new') {
             setRows([...rows, row]);
@@ -560,8 +569,6 @@ export function CardEditorConnected(props:{
             setRows(rows);
         }
 
-        console.log('---------------primarykeyvalues')
-        console.log(getPrimaryKeyValuesFixedFields(tableDef, fixedFields))
         const primaryKeyValues = getPrimaryKeyValuesFixedFields(tableDef, fixedFields)
         if(mode == 'insert'){
             tableDef.primaryKey.forEach((pk, index) => {
@@ -581,8 +588,6 @@ export function CardEditorConnected(props:{
         setTableDef(fakeTableDef)
         setUpdatesToRow({});
         setOriginalRow({});
-        console.log('-------------fixedFields')
-        console.log(JSON.stringify(fixedFields))
         var firstPromise = conn.ajax.table_structure({table}).then(tableDef=>{setTableDef(tableDef); return tableDef})
         Promise.all([
             firstPromise,
@@ -617,7 +622,7 @@ export function CardEditorConnected(props:{
     }, [saving])
     console.log("===============");
     console.log(JSON.stringify(updatesToRow))
-    const lists = (name:string, row:RowType) => {
+    const lists = (name:string, row:RowType, tableName: string, labelFields: string[] = []) => {
         var info = optionsInfo?.chained?.[name] ?? [];
         // @ts-expect-error
         var fieldDef:FieldDefinition = tableDef.field[name]!
@@ -625,15 +630,28 @@ export function CardEditorConnected(props:{
             // @ts-expect-error
             info = info[row[key]] ?? []
         }
-        var result: string[] = [
-            ...(info instanceof Array && info.length ? info : []),
-            ...(info instanceof Array && info.length && optionsInfo?.relations?.[name] ? [SEPARATOR_STR] : []),
-            ...(optionsInfo?.relations?.[name] ? optionsInfo?.relations[name] : [])
-        ]
+        // var result: string[] = [
+        //     ...(info instanceof Array && info.length ? info : []),
+        //     ...(info instanceof Array && info.length && optionsInfo?.relations?.[name] ? [SEPARATOR_STR] : []),
+        //     ...(optionsInfo?.relations?.[name] ? optionsInfo?.relations[name] : [])
+        // ]
+
+        const tableData = optionsInfo?.tables?.[tableName] || {};
+        const relatedKeys = optionsInfo?.relations?.[name] || [];
+
+        var result = relatedKeys
+            .filter(key => tableData[key])
+            .map(key => ({
+                label: labelFields.length > 0 ? labelFields.map(field => tableData[key]?.[field]).filter(Boolean) : [key],
+                value: key
+            }));
+
+        console.log('labelfields', labelFields)
+        console.log(name,JSON.stringify(optionsInfo))
         console.log("------------", name);
         console.log(JSON.stringify(row));
-        console.log(JSON.stringify(info));
-        console.log(JSON.stringify(result));
+        console.log('info', JSON.stringify(info));
+        console.log('result',JSON.stringify(result));
         return result;
     }
     return <>
@@ -699,7 +717,7 @@ export function CardEditorConnected(props:{
                     const isValueUpdated = name in updatesToRow;
                     const value = (isValueUpdated ? updatesToRow[name] : originalRow[name]) ?? null;
                     const originalValue = originalRow[name] ?? null;
-                    return {fd, value, forEdit, originalValue, isValueUpdated, mobile, makeChange, getOptions:()=>lists(name, newRow) ?? []}
+                    return {fd, value, forEdit, originalValue, isValueUpdated, mobile, makeChange, getOptions:()=>lists(name, newRow, fd.references || "") ?? []}
                 });
                 return <CardDisplay fieldsProps={fieldsProps} optionsInfo={optionsInfo}/>
             })()}
