@@ -411,6 +411,7 @@ export type GenericFieldProperties = {
 }
 
 export function GenericField(props:GenericFieldProperties){
+    console.log('genericfield', JSON.stringify(props))
     const variant = "standard";
     var {fd, value, originalValue, isValueUpdated, mobile, makeChange} = props;
     const {name, typeName, title, allow} = fd;
@@ -537,6 +538,10 @@ export function CardEditorConnected(props:{
     const [mobile, setMobile] = useState(window.navigator.maxTouchPoints > 2);
     const [changeCount, setChangeCount] = useState(0);
     const getPrimaryKeyValues = (tableDef:TableDefinition, row:RowType) => tableDef.primaryKey.map(fn => row[fn]);
+    const getPrimaryKeyValuesFixedFields = (tableDef:TableDefinition, row:FixedFields) => tableDef.primaryKey.map(fn => {
+        const field = row.find(field => field.fieldName == fn);
+        return field ? field.value : undefined;
+    });
     const setRowsAndPosition = (tableDef:TableDefinition, rows:RowType[], position:number|null, status:'new'|'update')=>{
         setDirty(false);
         setSaving(false);
@@ -546,13 +551,28 @@ export function CardEditorConnected(props:{
         }
         const pos = status == 'new' ? rows.length + 1 : position == null ? 1 : position > rows.length ? rows.length : position < 1 ? 1 : position;
         setPosition(pos);
-        const row = status == 'new'|| mode == 'insert' ? beingArray(tableDef.fields).build(fd => ({[fd.name]:null})).plain() : rows[pos - 1];
+        console.log('----------------beingarray')
+        console.log(JSON.stringify(beingArray(tableDef.fields).build(fd => ({[fd.name]:null})).plain()))
+        const row = status == 'new' || mode == 'insert'? beingArray(tableDef.fields).build(fd => ({[fd.name]:null})).plain() : rows[pos - 1];
         if (status == 'new') {
             setRows([...rows, row]);
         } else {
             setRows(rows);
         }
-        setPrimaryKeyValues(getPrimaryKeyValues(tableDef, row));
+
+        console.log('---------------primarykeyvalues')
+        console.log(getPrimaryKeyValuesFixedFields(tableDef, fixedFields))
+        const primaryKeyValues = getPrimaryKeyValuesFixedFields(tableDef, fixedFields)
+        if(mode == 'insert'){
+            tableDef.primaryKey.forEach((pk, index) => {
+                if (primaryKeyValues[index] !== undefined) {
+                    row[pk] = primaryKeyValues[index];
+                }
+            });
+            setPrimaryKeyValues(getPrimaryKeyValuesFixedFields(tableDef, fixedFields))
+        }else{
+            setPrimaryKeyValues(getPrimaryKeyValues(tableDef, row));
+        }
         setUpdatesToRow({});
         setOriginalRow(row);
         setStatus(status)
@@ -561,6 +581,8 @@ export function CardEditorConnected(props:{
         setTableDef(fakeTableDef)
         setUpdatesToRow({});
         setOriginalRow({});
+        console.log('-------------fixedFields')
+        console.log(JSON.stringify(fixedFields))
         var firstPromise = conn.ajax.table_structure({table}).then(tableDef=>{setTableDef(tableDef); return tableDef})
         Promise.all([
             firstPromise,
