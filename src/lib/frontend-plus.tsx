@@ -1,5 +1,5 @@
 import * as React from "react";
-import * as ReactDOM from "react-dom";
+import { createRoot } from 'react-dom/client';
 import {
     FocusEvent, 
     useEffect, useState, 
@@ -166,7 +166,9 @@ export function ComboBox(props:{
             required={true} 
             error={checkError(value)} 
             label={label} 
-            InputLabelProps={{shrink: value != null}}
+            slotProps={{
+                inputLabel:{shrink: value != null}
+            }}
             variant={variant}
             className={className}
         />}
@@ -251,7 +253,9 @@ export function VerticalCardEditor(props:{updatesToRow:RowType, originalRow:RowT
                             makeChange(ifNotNullApply(event.target.value, BestGlobals.date.iso));
                         }}
                         type="date" 
-                        InputLabelProps={{ shrink: true }} 
+                        slotProps={{
+                            inputLabel:{shrink: true}
+                        }}
                         label={title} 
                         disabled={!editable}
                         title={toolTip}
@@ -268,7 +272,9 @@ export function VerticalCardEditor(props:{updatesToRow:RowType, originalRow:RowT
                             makeChange(ifNotNullApply(event.target.value, Number));
                         }}
                         type="number" 
-                        InputLabelProps={{ shrink: value != null }} 
+                        slotProps={{
+                            inputLabel:{shrink: value != null}
+                        }}
                         label={title} 
                         disabled={!editable}
                         title={toolTip}
@@ -339,7 +345,9 @@ export function GenericField(props:GenericFieldProperties){
                     makeChange(ifNotNullApply(event.target.value, BestGlobals.date.iso));
                 }}
                 type="date" 
-                InputLabelProps={{ shrink: true }} 
+                slotProps={{
+                    inputLabel:{shrink: true}
+                }}
                 label={title} 
                 disabled={!editable}
                 title={toolTip}
@@ -355,7 +363,9 @@ export function GenericField(props:GenericFieldProperties){
                     makeChange(ifNotNullApply(event.target.value, Number));
                 }}
                 type="number" 
-                InputLabelProps={{ shrink: value != null }} 
+                slotProps={{
+                    inputLabel:{shrink: value != null}
+                }}
                 label={title} 
                 disabled={!editable}
                 title={toolTip}
@@ -631,12 +641,11 @@ export function renderConnectedApp(
     if (!conn.ajax.option_lists) {
         throw new Error("falta conn.ajax.option_lists en renderCardEditor");
     }
-    ReactDOM.render(
-        <CaptureError>
-            <ConnectedApp table={addrParams.table} fixedFields={fixedFields} conn={conn}/>
-        </CaptureError>,
-        document.getElementById('total-layout')
-    )
+    const domNode = document.getElementById('total-layout')!;
+    const root = createRoot(domNode);
+    root.render(<CaptureError>
+        <ConnectedApp table={addrParams.table} fixedFields={fixedFields} conn={conn}/>
+    </CaptureError>,);
 }
 
 export function renderCardEditor(
@@ -663,12 +672,11 @@ export function renderCardEditorLegacy(
     if (!conn.ajax.option_lists) {
         throw new Error("falta conn.ajax.option_lists en renderCardEditor");
     }
-    ReactDOM.render(
-        <CaptureError>
-            <CardEditorConnected table={addrParams.table} fixedFields={fixedFields} conn={conn} CardDisplay={CardVerticalDisplay}/>
-        </CaptureError>,
-        document.getElementById('total-layout')
-    )
+    const domNode = document.getElementById('total-layout')!;
+    const root = createRoot(domNode);
+    root.render(<CaptureError>
+        <CardEditorConnected table={addrParams.table} fixedFields={fixedFields} conn={conn} CardDisplay={CardVerticalDisplay}/>
+    </CaptureError>);
 }
 
 

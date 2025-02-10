@@ -1,5 +1,6 @@
 const path = require('path');
 module.exports = {
+    devtool:'source-map',
     mode: 'development',
     entry: {
         "frontend-plus": './dist/lib/frontend-plus.js',
