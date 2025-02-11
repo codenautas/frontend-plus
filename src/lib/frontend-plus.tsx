@@ -65,7 +65,8 @@ export interface BEAPI {
 }
 
 export interface Connector {
-    ajax: BEAPI
+    ajax: BEAPI,
+    config: any
 }
 
 export interface AddrParams {
