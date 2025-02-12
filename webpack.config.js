@@ -7,7 +7,7 @@ module.exports = {
         //unlogged:'./dist/unlogged/unlogged.js',
     },
     output: {
-        filename: 'dist/[name]-bundle.js',
+        filename: 'lib/[name]-bundle.js',
         path: path.resolve(__dirname, 'dist')
     },
     module: {

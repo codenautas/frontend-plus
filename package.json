@@ -1,11 +1,11 @@
 {
   "name": "frontend-plus",
-  "version": "0.0.9",
+  "version": "1.0.0-alpha.1",
   "description": "frontend for backend-plus",
   "author": "Codenautas <codenautas@googlegroups.com>",
   "license": "MIT",
   "repository": "codenautas/frontend-plus",
-  "main": "dist/lib/frontend-plus.js",
+  "main": "dist/lib/frontend-plus-bundle.js",
   "types": "dist/lib/frontend-plus.d.ts",
   "files": [
     "dist",
