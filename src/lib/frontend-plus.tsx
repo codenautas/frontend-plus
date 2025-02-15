@@ -603,10 +603,12 @@ class CaptureError extends React.Component<
     }
     override render(){
         if(this.state.hasError){
+            var {componentStack, ...rest} = JSON.parse(this.state.error.message);
             return <>
-                <Typography>Hubo un problema en la programación del dipositivo móvil.</Typography>
+                <Typography>Hubo un problema en la programación del despliegue de pantalla.</Typography>
                 <Typography>Error detectado:</Typography>
-                <Typography>{this.state.error.message}</Typography>
+                <pre>{componentStack}</pre>
+                <Typography>{JSON.stringify(rest)}</Typography>
                 <Typography>{JSON.stringify(this.state.info)}</Typography>
             </>;
         }
