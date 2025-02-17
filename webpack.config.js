@@ -9,9 +9,9 @@ module.exports = {
     output: {
         filename: 'lib/[name]-bundle.js',
         path: path.resolve(__dirname, 'dist'),
-        //libraryTarget: 'umd', // Formato de salida UMD
-        //library: 'frontend-plus-bundle', // Nombre de tu librería (importante para UMD)
-        //globalObject: 'this', // Necesario para UMD en el navegador
+        libraryTarget: 'umd', // Formato de salida UMD
+        library: 'frontend-plus-bundle', // Nombre de tu librería (importante para UMD)
+        globalObject: 'this', // Necesario para UMD en el navegador
     },
     resolve: {
         extensions: ['.tsx', '.ts', '.js', '.jsx'], // Importante: incluye .tsx y .ts
@@ -40,8 +40,8 @@ module.exports = {
     },
     externals: {
         //no incluir en el bundle (agregar a proyecto final)
-        //react: 'react', 
-        //'react-dom': 'react-dom',
-        //'@mui/material': '@mui/material',
+        react: 'react', 
+        'react-dom': 'react-dom',
+        '@mui/material': '@mui/material',
     },
 };
