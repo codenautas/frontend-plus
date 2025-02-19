@@ -1,7 +1,7 @@
 # frontend-plus
 Frontend para backend-plus
 
-#instalacion
+## instalacion
 
 la app final debe tener mínimamente las siguientes dependencias en el package.json
 
