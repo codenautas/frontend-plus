@@ -410,6 +410,8 @@ export function CardVerticalDisplay(props:{fieldsProps:GenericFieldProperties[]}
 export function CardEditorConnected(props:{
     table:string, fixedFields:FixedFields, conn:Connector,
     withMenu?:boolean,
+    autoEdit?:boolean,
+    startPosition?:number|0, // 0 es el último
     CardDisplay:(props:{fieldsProps:GenericFieldProperties[], optionsInfo:OptionsInfo}) => JSX.Element
 }){
     const {table, fixedFields, conn, withMenu, CardDisplay} = props;
@@ -423,26 +425,27 @@ export function CardEditorConnected(props:{
     const [updatesToRow, setUpdatesToRow] = useState<RowType>({});
     const [rows, setRows] = useState<RowType[]>([]);
     const [originalRow, setOriginalRow] = useState<RowType>({});
+    const [editing, setEditing] = useState(props.autoEdit ?? false);
     const [optionsInfo, setOptionsInfo] = useState<OptionsInfo>({chained: {}, relations: {}, tables:{}});    
     const [dirty, setDirty] = useState(false);
     const [error, setError] = useState<Error|null>(null);
     const [saving, setSaving] = useState(false);
     const [primaryKeyValues, setPrimaryKeyValues] = useState<any[]>([])
     const [message, setMessage] = useState("");
-    const [position, setPosition] = useState<number|null>(1);
+    const [position, setPosition] = useState<number>(props.startPosition ?? 0);
     const [count, setCount] = useState(0);
     const [status, setStatus] = useState<RecordStatus>('update');
     const [mobile, setMobile] = useState(window.navigator.maxTouchPoints > 2);
     const [changeCount, setChangeCount] = useState(0);
     const getPrimaryKeyValues = (tableDef:TableDefinition, row:RowType) => tableDef.primaryKey.map(fn => row[fn]);
-    const setRowsAndPosition = (tableDef:TableDefinition, rows:RowType[], position:number|null, status:'new'|'update')=>{
+    const setRowsAndPosition = (tableDef:TableDefinition, rows:RowType[], position:number, status:'new'|'update', circular: boolean)=>{
         setDirty(false);
         setSaving(false);
         setCount(rows.length);
         if (rows.length == 0) {
             status = 'new';
         }
-        const pos = status == 'new' ? rows.length + 1 : position == null ? 1 : position > rows.length ? rows.length : position < 1 ? 1 : position;
+        const pos = status == 'new' ? rows.length + 1 : circular ? position = ((position - 1) % rows.length + rows.length) % rows.length + 1 : position > rows.length ? rows.length : position < 1 ? 1 : position;
         setPosition(pos);
         const row = status == 'new' ? beingArray(tableDef.fields).build(fd => ({[fd.name]:null})).plain() : rows[pos - 1];
         if (status == 'new') {
@@ -453,6 +456,8 @@ export function CardEditorConnected(props:{
         setPrimaryKeyValues(getPrimaryKeyValues(tableDef, row));
         setUpdatesToRow({});
         setOriginalRow(row);
+        if (status == 'new') setEditing(true);
+        else if (!props.autoEdit) setEditing(false);
         setStatus(status)
     }
     useEffect(() => {
@@ -464,7 +469,7 @@ export function CardEditorConnected(props:{
             firstPromise,
             conn.ajax.table_data({table, fixedFields, paramfun:{}}).then(function(rows){
                 return firstPromise.then((tableDef:TableDefinition)=>{
-                    setRowsAndPosition(tableDef, rows, 0, 'update')
+                    setRowsAndPosition(tableDef, rows, position, 'update', true)
                 })
             }),
             conn.ajax.option_lists({table}).then(setOptionsInfo),
@@ -485,7 +490,7 @@ export function CardEditorConnected(props:{
             }).then((result)=>{
                 var newRow = result.row;
                 var newRows = rows.map(r => r == originalRow ? newRow : r);
-                setRowsAndPosition(tableDef, newRows, position, 'update')
+                setRowsAndPosition(tableDef, newRows, position, 'update', false)
             }).catch(function(err){
                 setMessage(err.message);
             });
@@ -512,6 +517,16 @@ export function CardEditorConnected(props:{
         console.log(JSON.stringify(result));
         return result;
     }
+    const onRowChange=function(row:RowType){
+        setChangeCount(x => x+1)
+        var dirty = false;
+        for (var _ in row) {
+            dirty = true;
+            break;
+        }
+        setDirty(dirty);
+        setUpdatesToRow(row);
+    }
     return <>
         {withMenu ? <MenuH title="Renglón" rightTitle={(changeCount || '').toString()} mobile={mobile} onMobile={setMobile}/> : null }
         <div style={{display: error == null ? "none" : "unset"}}>
@@ -527,10 +542,18 @@ export function CardEditorConnected(props:{
             noValidate
             autoComplete="off"
         >
-            <Button disabled = { dirty || status == 'new' || count <= 1} onClick={_ =>{ setRowsAndPosition(tableDef, rows, position && position - 1, 'update')} }><ICON.KeyboardArrowUp/></Button>
+            <Button disabled = { dirty || status == 'new' || count <= 1} onClick={_ =>{ setRowsAndPosition(tableDef, rows, position && position - 1, 'update', false)} }><ICON.KeyboardArrowUp/></Button>
             <Typography>{position == null ? 'NO' : position + '/' + count }</Typography>
-            <Button disabled = { dirty || status == 'new' || count <= 1} onClick={_ =>{ setRowsAndPosition(tableDef, rows, position && position + 1, 'update')} }><ICON.KeyboardArrowDown/></Button>
-            <Button disabled = { dirty || status == 'new' } title={"Agregar"} onClick={_ =>{ setRowsAndPosition(tableDef, rows, null, 'new')} }><ICON.AddCircleOutlineRounded/></Button>
+            <Button disabled = { dirty || status == 'new' || count <= 1} onClick={_ =>{ setRowsAndPosition(tableDef, rows, position && position + 1, 'update', false)} }><ICON.KeyboardArrowDown/></Button>
+            { props.autoEdit ? null :
+                <Button disabled = { status == 'new' || editing } title={"Editar"} onClick={_ => setEditing(true) }>
+                    { dirty ? <ICON.Redo/> : <ICON.Edit/>}
+                </Button>
+            }
+            <Button disabled = { dirty || status == 'new' } title={"Agregar"} onClick={_ =>{ setRowsAndPosition(tableDef, rows, 0, 'new', false)} }><ICON.AddCircleOutlineRounded/></Button>
+            { dirty && (!editing || props.autoEdit) ?
+                <Button color="error" title={"Undo"} onClick={_ =>{ onRowChange(originalRow); setSaving(true);  } }><ICON.Undo/></Button>
+            : null}
         </FormControl>
         <FormControl
             key={JSON4all.toUrl(primaryKeyValues)}
@@ -542,17 +565,7 @@ export function CardEditorConnected(props:{
             autoComplete="off"
         >
             {(()=>{
-                const onRowChange=function(row:RowType){
-                    setChangeCount(x => x+1)
-                    var dirty = false;
-                    for (var _ in row) {
-                        dirty = true;
-                        break;
-                    }
-                    setDirty(dirty);
-                    setUpdatesToRow(row);
-                }
-                const forEdit = !saving;
+                const forEdit = !saving && editing;
                 const fieldsDef = tableDef.fields; 
                 const newRow = {...originalRow, ...updatesToRow};
                 console.log('=============')
@@ -575,16 +588,28 @@ export function CardEditorConnected(props:{
                 });
                 return <CardDisplay fieldsProps={fieldsProps} optionsInfo={optionsInfo}/>
             })()}
-            <Button 
-                key={"$ button save"}
-                startIcon={saving ? <CircularProgress size={20} /> : <ICON.Save/>} 
-                disabled={!dirty || saving}
-                onClick={()=>{
-                    setSaving(true);
-                }}
-            >
-                {saving ? 'Guardando' : dirty ? 'Guardar' : 'Guardado'}
-            </Button>
+            <div style={{display: "flex", flexDirection: "row", justifyContent: "space-between"}}>
+                { props.autoEdit ? null : 
+                <Button 
+                    key={"$ button cancel"}
+                    onClick={() => setEditing(false)}
+                    disabled={!(editing && dirty && !saving)}
+                    startIcon={<ICON.Cancel/>}
+                    color="error"
+                >
+                    cancel
+                </Button>}
+                <Button 
+                    key={"$ button save"}
+                    startIcon={saving ? <CircularProgress size={20} /> : <ICON.Save/>} 
+                    disabled={!dirty || saving}
+                    onClick={()=>{
+                        setSaving(true);
+                    }}
+                >
+                    {saving ? 'Guardando' : dirty ? 'Guardar' : 'Guardado'}
+                </Button>
+            </div>
         </FormControl>
         <Typography>{message}</Typography>
     </>
@@ -599,18 +624,35 @@ class CaptureError extends React.Component<
         this.state = { hasError: false, error:{message:''} };
     }
     override componentDidCatch(error:Error, info:any){
+        if (localStorage.skipErrorCapture) {
+            console.error("localStorage.skipErrorCapture=true. Error");
+            console.error(error);
+            return;
+        }
         this.setState({ hasError: true , error, info });
     }
     override render(){
         if(this.state.hasError){
-            var {componentStack, ...rest} = JSON.parse(this.state.error.message);
-            return <>
-                <Typography>Hubo un problema en la programación del despliegue de pantalla.</Typography>
-                <Typography>Error detectado:</Typography>
-                <pre>{componentStack}</pre>
-                <Typography>{JSON.stringify(rest)}</Typography>
-                <Typography>{JSON.stringify(this.state.info)}</Typography>
-            </>;
+            try {
+                var {componentStack, ...rest} = JSON.parse(this.state.error.message);
+                return <>
+                    <Typography>Hubo un problema en la programación del despliegue de pantalla.</Typography>
+                    <Typography>Error detectado:</Typography>
+                    <pre>{componentStack}</pre>
+                    <Typography>{JSON.stringify(rest)}</Typography>
+                    <Typography>{JSON.stringify(this.state.info)}</Typography>
+                </>;
+            } catch {
+                return <>
+                    <Typography>Hubo un problema en la programación del despliegue de pantalla.</Typography>
+                    <Typography>Error detectado:</Typography>
+                    <Typography>{this.state.error.message}</Typography>
+                    <Typography>{JSON.stringify(
+                        // @ts-expect-error stack is not always present
+                        this.state.error.stack
+                    )}</Typography>
+                </>
+            }
         }
         return this.props.children;
     }
@@ -642,10 +684,12 @@ export function renderConnectedApp(
 export function renderCardEditor(
     conn:Connector,
     addrParams:AddrParams,
-    layout: HTMLElement
+    layout: HTMLElement,
+    opts?:{withMenu: boolean}
 ){
+    const {withMenu} = opts || {};
     renderConnectedApp(conn, addrParams, layout, 
-        ({table, fixedFields, conn}) => CardEditorConnected({table, fixedFields, conn, CardDisplay:CardVerticalDisplay})
+        ({table, fixedFields, conn}) => CardEditorConnected({table, fixedFields, conn, CardDisplay:CardVerticalDisplay, withMenu})
     )
 }
 

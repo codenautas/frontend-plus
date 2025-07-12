@@ -1,6 +1,6 @@
 {
   "name": "frontend-plus",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "description": "frontend for backend-plus",
   "author": "Codenautas <codenautas@googlegroups.com>",
   "license": "MIT",
@@ -22,24 +22,24 @@
     }
   ],
   "dependencies": {
-    "@mui/lab": "^5.0.0-alpha.173",
-    "@mui/material": "^5.16.7",
+    "@mui/lab": "^5.0.0-alpha.177",
+    "@mui/material": "^5.18.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-redux": "^9.1.2"
   },
   "devDependencies": {
-    "backend-plus": "^2.0.5",
-    "typescript": "^5.6.3",
+    "backend-plus": "^2.2.9",
+    "typescript": "^5.8.3",
     "@types/node": "^22.8.7",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@types/react-redux": "^7.1.34",
     "source-map-loader": "^5.0.0",
-    "ts-loader": "^9.5.1",
-    "webpack": "^5.96.1",
-    "webpack-cli": "^5.1.4",
-    "types.d.ts": "^0.6.21",
+    "ts-loader": "^9.5.2",
+    "webpack": "^5.100.1",
+    "webpack-cli": "^6.0.1",
+    "types.d.ts": "^0.6.22",
     "mixin-patch": "^0.4.1"
   },
   "scripts": {
