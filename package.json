@@ -11,10 +11,10 @@
     "dist",
     "dist/lib"
   ],
-  "engines" : { 
-    "node" : ">=20.15",
-    "npm" : ">=10.7"
-  },  
+  "engines": {
+    "node": ">=20.15",
+    "npm": ">=10.7"
+  },
   "contributors": [
     {
       "name": "Emilio Platzer",
@@ -40,9 +40,19 @@
     "webpack": "^5.111.1",
     "webpack-cli": "^7.2.3",
     "types.d.ts": "^0.6.22",
+    "qa-control": "^0.11.3",
     "mixin-patch": "^0.5.0"
   },
   "scripts": {
     "prepare": "tsc -p tsconfig-lib.json"
+  },
+  "qa-control": {
+    "run-in": "client",
+    "type": "lib",
+    "fileNameMainDoc": "README.md",
+    "multilang": "no",
+    "gha": {
+      "skip_tests": true
+    }
   }
 }
