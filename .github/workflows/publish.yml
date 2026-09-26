@@ -14,4 +14,4 @@ jobs:
     uses: codenautas/.github/.github/workflows/npm-publish-new-version.yaml@main
     with:
       node_version: '24'
-      skip_tests: true
+      publish_without_testing: true

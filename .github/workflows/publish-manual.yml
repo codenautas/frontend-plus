@@ -13,4 +13,4 @@ jobs:
     with:
       node_version: '24'
       create-tag: true
-      skip_tests: true
+      publish_without_testing: true
