@@ -658,13 +658,32 @@ class CaptureError extends React.Component<
     }
 }
 
+var currentReactContainer: HTMLElement | null = null;
+
+export function unmountConnectedApp(){
+    if (currentReactContainer != null) {
+        // el contenedor puede estar fuera del documento (si backend-plus hizo innerHTML='' en un ancestro)
+        // pero conserva sus nodos, así que React lo puede desmontar sin errores
+        ReactDOM.unmountComponentAtNode(currentReactContainer);
+        currentReactContainer = null;
+    }
+}
+
+function mountInLayout(layout: HTMLElement, element: JSX.Element){
+    unmountConnectedApp();
+    layout.innerHTML="";
+    var container = document.createElement('div');
+    layout.appendChild(container);
+    currentReactContainer = container;
+    ReactDOM.render(element, container);
+}
+
 export function renderConnectedApp(
     conn:Connector,
     addrParams:AddrParams,
     layout: HTMLElement,
     ConnectedApp: (props:{table: string, fixedFields:FixedFields, conn:Connector}) => JSX.Element
 ){
-    layout.innerHTML="";
     if (addrParams.ff instanceof Array) {
         var fixedFields:FixedFields = addrParams.ff;
     } else {
@@ -673,11 +692,10 @@ export function renderConnectedApp(
     if (!conn.ajax.option_lists) {
         throw new Error("falta conn.ajax.option_lists en renderCardEditor");
     }
-    ReactDOM.render(
+    mountInLayout(layout,
         <CaptureError>
             <ConnectedApp table={addrParams.table} fixedFields={fixedFields} conn={conn}/>
-        </CaptureError>,
-        document.getElementById('total-layout')
+        </CaptureError>
     )
 }
 
@@ -698,7 +716,6 @@ export function renderCardEditorLegacy(
     addrParams:AddrParams,
     layout: HTMLElement
 ){
-    layout.innerHTML="";
     if (addrParams.ff instanceof Array) {
         var fixedFields:any = addrParams.ff;
     } else {
@@ -707,11 +724,10 @@ export function renderCardEditorLegacy(
     if (!conn.ajax.option_lists) {
         throw new Error("falta conn.ajax.option_lists en renderCardEditor");
     }
-    ReactDOM.render(
+    mountInLayout(layout,
         <CaptureError>
             <CardEditorConnected table={addrParams.table} fixedFields={fixedFields} conn={conn} CardDisplay={CardVerticalDisplay}/>
-        </CaptureError>,
-        document.getElementById('total-layout')
+        </CaptureError>
     )
 }
 
