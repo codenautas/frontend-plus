@@ -1,5 +1,6 @@
 import * as React from "react";
 import * as ReactDOM from "react-dom";
+import type * as ReactDOMClient from "react-dom/client";
 import {
     FocusEvent, 
     useEffect, useState, 
@@ -658,14 +659,18 @@ class CaptureError extends React.Component<
     }
 }
 
-var currentReactContainer: HTMLElement | null = null;
+// en el navegador react-dom/client no se puede requerir (require-bro busca "client"),
+// pero el ReactDOM global (UMD de React 18) incluye createRoot
+const ReactDOMWithClient: typeof ReactDOM & typeof ReactDOMClient = ReactDOM as typeof ReactDOM & typeof ReactDOMClient;
+
+var currentReactRoot: ReactDOMClient.Root | null = null;
 
 export function unmountConnectedApp(){
-    if (currentReactContainer != null) {
+    if (currentReactRoot != null) {
         // el contenedor puede estar fuera del documento (si backend-plus hizo innerHTML='' en un ancestro)
         // pero conserva sus nodos, así que React lo puede desmontar sin errores
-        ReactDOM.unmountComponentAtNode(currentReactContainer);
-        currentReactContainer = null;
+        currentReactRoot.unmount();
+        currentReactRoot = null;
     }
 }
 
@@ -674,8 +679,10 @@ function mountInLayout(layout: HTMLElement, element: JSX.Element){
     layout.innerHTML="";
     var container = document.createElement('div');
     layout.appendChild(container);
-    currentReactContainer = container;
-    ReactDOM.render(element, container);
+    var root = ReactDOMWithClient.createRoot(container);
+    currentReactRoot = root;
+    // flushSync para que quede dibujado al volver, como hacía ReactDOM.render
+    ReactDOM.flushSync(() => root.render(element));
 }
 
 export function renderConnectedApp(
