@@ -21,9 +21,8 @@ permissions:
 
 jobs:
   create-new-version:
-    uses: codenautas/.github/.github/workflows/create-new-version.yaml@main
+    uses: codenautas/.github/.github/workflows/create-new-version.yaml@v3
     with:
       bump: ${{ inputs.bump }}
       preid: ${{ inputs.preid }}
-      node_version: '24'
-      skip_tests: true
+      node_version: '24.x'
