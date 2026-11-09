@@ -2,19 +2,19 @@ import * as React from "react";
 import * as ReactDOM from "react-dom";
 import type * as ReactDOMClient from "react-dom/client";
 import {
-    FocusEvent, 
-    useEffect, useState, 
+    FocusEvent,
+    useEffect, useState,
 } from "react";
 
 import {
-    Alert, AppBar, Autocomplete, 
-    Button, 
+    Alert, AppBar, Autocomplete,
+    Button,
     Checkbox, CircularProgress,
     FormControl, FormControlLabel,
     IconButton,
-    List, ListItemButton, ListItemText, 
-    MenuItem, 
-    Select, SvgIcon, SwipeableDrawer, 
+    List, ListItemButton, ListItemText,
+    MenuItem,
+    Select, SelectChangeEvent, SvgIcon, SwipeableDrawer,
     TextField, TextFieldVariants, Toolbar, Typography,
 } from "@mui/material";
 
@@ -23,7 +23,7 @@ import { strict as likeAr, beingArray } from "like-ar";
 import * as JSON4all from "json4all";
 import * as BestGlobals from "best-globals";
 
-////// BACKEND-PLUS partial interfaces 
+////// BACKEND-PLUS partial interfaces
 export interface FieldDefinition {
     name: string
     typeName: 'text'|'decimal'|'boolean'|'date'|'bigint'
@@ -42,21 +42,21 @@ export interface TableDefinition {
     primaryKey: string[]
 }
 
-export type RecordStatus = 'new'|'update' 
-export type FixedFields = {fieldName:string, value:any}[]
+export type RecordStatus = 'new'|'update'
+export type FixedFields = {fieldName:string, value:FieldTypes}[]
 export interface BEAPI {
     table_structure: (params:{
         table: string
     }) => Promise<TableDefinition>
     table_data: <T extends RowType>(params:{
-        table: string, 
-        fixedFields: FixedFields, 
+        table: string,
+        fixedFields: FixedFields,
         paramfun: {}
     }) => Promise<T[]>
     table_record_save: (params:{
-        table: string, 
-        primaryKeyValues: any[], 
-        newRow: RowType, 
+        table: string,
+        primaryKeyValues: FieldTypes[],
+        newRow: RowType,
         oldRow: RowType,
         status: RecordStatus
     }) => Promise<{row: RowType}>
@@ -71,10 +71,10 @@ export interface Connector {
 
 export interface AddrParams {
     table: string
-    ff: Record<string, any> | {fieldName:string, value:any}[]
+    ff: Record<string, FieldTypes> | FixedFields
 }
 
-////// END-BACKEND partial interfaces 
+////// END-BACKEND partial interfaces
 
 export const ICON = likeAr(myIcons).map(svgText=> () =>
     <SvgIcon><path d={svgText}/></SvgIcon>
@@ -101,7 +101,7 @@ export function MenuH(props:{title:string, rightTitle?:string, mobile:boolean, o
                 <IconButton color="inherit" onClick={()=>{window.location.href="./menu"}}><ICON.ExitToApp/></IconButton>
             </Toolbar>
         </AppBar>
-        <SwipeableDrawer  
+        <SwipeableDrawer
             open={menuOpened}
             onClose={()=>setMenuOpened(false)}
             onOpen={()=>setMenuOpened(true)}
@@ -112,12 +112,12 @@ export function MenuH(props:{title:string, rightTitle?:string, mobile:boolean, o
                 onKeyDown={()=>setMenuOpened(false)}
             >
                 <List>
-                    <ListItemButton 
+                    <ListItemButton
                         onClick={()=>{
                             setMenuOpened(false);
                         }}
                     >
-                        <ListItemText primary="administrar" 
+                        <ListItemText primary="administrar"
                             onClick={()=>{
                                 window.location.href="./login"
                             }}
@@ -142,20 +142,20 @@ export function ComboBox(props:{
     var [mobileKeyboardEditing, setMobileKeyboardEditing] = useState(false);
     var {key, value, valueOfNull, onChange, options, label, freeSolo, disabled, variant, className, title,
         mobile
-        // sx, inputProps, 
+        // sx, inputProps,
     } = props
     var checkError = (value:string|null) => !freeSolo && !options.includes(value as string);
-    return !mobile || mobileKeyboardEditing ? <Autocomplete 
+    return !mobile || mobileKeyboardEditing ? <Autocomplete
         disablePortal
         key={key}
         value={value ?? ''}
-        onChange={(_event: any, newValue: any) => {
+        onChange={(_event: React.SyntheticEvent, newValue: string|null) => {
             var isNull = newValue != null && newValue !== ''
             const value = isNull ? newValue : valueOfNull;
             onChange(value);
             // if (!isNull) setMobileKeyboardEditing(false)
         }}
-        onBlur={(event: FocusEvent<any>) => {
+        onBlur={(event: FocusEvent<HTMLInputElement>) => {
             const newValue = event.target.value
             var isNull = newValue != null && newValue !== ''
             const value = isNull ? newValue : valueOfNull;
@@ -164,14 +164,14 @@ export function ComboBox(props:{
         }}
         options={options}
         renderInput={(params) => <TextField {...params}
-            required={true} 
-            error={checkError(value)} 
-            label={label} 
+            required={true}
+            error={checkError(value)}
+            label={label}
             InputLabelProps={{shrink: value != null}}
             variant={variant}
             className={className}
         />}
-        getOptionDisabled={value => value == SEPARATOR_STR}
+        getOptionDisabled={value => value === SEPARATOR_STR}
         freeSolo={freeSolo}
         autoSelect={true}
         disabled={disabled}
@@ -179,22 +179,22 @@ export function ComboBox(props:{
     /> : <Select
         key={key}
         value={value ?? ''}
-        onChange={(event: any, _selectedItem: any) => {
+        onChange={(event: SelectChangeEvent<string>, _selectedItem: React.ReactNode) => {
             const newValue = event.target.value;
             const value = newValue != null && newValue !== '' ? newValue : valueOfNull;
             if (value == null || value === "") setMobileKeyboardEditing(true)
             else onChange(value);
         }}
-        label={label} 
+        label={label}
         variant={variant}
         className={className}
-        required={true} 
-        error={checkError(value)} 
+        required={true}
+        error={checkError(value)}
         disabled={disabled}
         title={title}
     >
         <MenuItem key={"$ keyboard $$$$!"} value={""}><ICON.KeyboardHideRounded/></MenuItem>
-        {options.map((o,i)=> <MenuItem key={o+"$$$$$"+i} value={o} disabled={o == SEPARATOR_STR}>{o}</MenuItem>)}
+        {options.map((o,i)=> <MenuItem key={o+"$$$$$"+i} value={o} disabled={o === SEPARATOR_STR}>{o}</MenuItem>)}
     </Select>
 }
 
@@ -205,17 +205,17 @@ export function VerticalCardEditor(props:{updatesToRow:RowType, originalRow:RowT
     mobile:boolean
 }){
     const {updatesToRow, originalRow, tableDef, lists, mobile} = props;
-    const fieldsDef = tableDef.fields; 
+    const fieldsDef = tableDef.fields;
     const variant:TextFieldVariants = "standard";
     const newRow = {...originalRow, ...updatesToRow};
     console.log('**************')
     console.log(JSON.stringify(newRow))
     return <>
-        {fieldsDef.map((fd) => { 
+        {fieldsDef.map((fd) => { // eslint-disable-line complexity
             const {name, typeName, title, allow} = fd;
             const editable = !!allow?.update && props.forEdit;
             const key = "renglon-" + name;
-            const makeChange = (newValue: any) => {
+            const makeChange = (newValue: FieldTypes) => {
                 var newUpdatesToRow = {...updatesToRow}
                 if (BestGlobals.sameValue(newValue, originalRow[name] ?? null)){
                     delete newUpdatesToRow[name];
@@ -232,55 +232,55 @@ export function VerticalCardEditor(props:{updatesToRow:RowType, originalRow:RowT
             switch(typeName){
                 case 'boolean':
                     return <FormControlLabel control={
-                        <Checkbox 
-                            key={key} 
+                        <Checkbox
+                            key={key}
                             checked={!!value}
                             onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
                                 makeChange(event.target.checked);
                             }}
                             disabled={!editable}
-                            name={title} 
+                            name={title}
                         />
                     } label={name}
                     className={classUpdated}
                     />;
                 case 'date':
-                    return <TextField 
-                        key={key} 
+                    return <TextField
+                        key={key}
                         value={value == null ? '' : (value as BestGlobals.RealDate)?.toYmd?.()}
                         onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
                             makeChange(ifNotNullApply(event.target.value, BestGlobals.date.iso));
                         }}
-                        type="date" 
-                        InputLabelProps={{ shrink: true }} 
-                        label={title} 
+                        type="date"
+                        InputLabelProps={{ shrink: true }}
+                        label={title}
                         disabled={!editable}
                         title={toolTip}
-                        variant={variant} 
+                        variant={variant}
                         className={classUpdated}
                     />
                 case 'decimal':
                 case 'bigint':
-                    return <TextField 
-                        key={key} 
+                    return <TextField
+                        key={key}
                         // value={ifNotNullApply(value, Number)}
                         value={value == null ? '' : value}
                         onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
                             makeChange(ifNotNullApply(event.target.value, Number));
                         }}
-                        type="number" 
-                        InputLabelProps={{ shrink: value != null }} 
-                        label={title} 
+                        type="number"
+                        InputLabelProps={{ shrink: value != null }}
+                        label={title}
                         disabled={!editable}
                         title={toolTip}
-                        variant={variant} 
+                        variant={variant}
                         className={classUpdated}
                     />
-                default: 
+                default: {
                     const options = lists(name, newRow) ?? [];
                     // @ts-expect-error value can be not string
                     if (value != null && !options.includes(value)) { options.unshift(value) }
-                    return <ComboBox 
+                    return <ComboBox
                         key={key}
                         value={value as string}
                         onChange={(value: string|null) => {
@@ -296,6 +296,7 @@ export function VerticalCardEditor(props:{updatesToRow:RowType, originalRow:RowT
                         className={classUpdated}
                         mobile={mobile}
                     />
+                }
             }
         })}
     </>
@@ -304,11 +305,11 @@ export function VerticalCardEditor(props:{updatesToRow:RowType, originalRow:RowT
 export type OptionsInfo = {chained?: RowType, relations?:Record<string, string[]>, tables?:Record<string, Record<string, RowType>>}
 
 export type GenericFieldProperties = {
-    fd:FieldDefinition, value:any, forEdit:boolean, originalValue:any, isValueUpdated:boolean,
-    mobile:boolean, makeChange:(value:any)=>void, getOptions:()=>any[]
+    fd:FieldDefinition, value:FieldTypes, forEdit:boolean, originalValue:FieldTypes, isValueUpdated:boolean,
+    mobile:boolean, makeChange:(value:FieldTypes)=>void, getOptions:()=>string[]
 }
 
-export function GenericField(props:GenericFieldProperties){
+export function GenericField(props:GenericFieldProperties){ // eslint-disable-line complexity
     const variant = "standard";
     var {fd, value, originalValue, isValueUpdated, mobile, makeChange} = props;
     const {name, typeName, title, allow} = fd;
@@ -319,54 +320,55 @@ export function GenericField(props:GenericFieldProperties){
     switch (typeName) {
         case 'boolean':
             return <FormControlLabel control={
-                <Checkbox 
-                    key={key} 
+                <Checkbox
+                    key={key}
                     checked={!!value}
                     onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
                         makeChange(event.target.checked);
                     }}
                     disabled={!editable}
-                    name={name} 
+                    name={name}
                 />
             } label={title}
             className={`fp-fieldname-${name} ${classUpdated}`}
             />;
         case 'date':
-            return <TextField 
-                key={key} 
+            return <TextField
+                key={key}
                 className={`fp-fieldname-${name} ${classUpdated}`}
                 value={value == null ? '' : (value as BestGlobals.RealDate)?.toYmd?.()}
                 onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
                     makeChange(ifNotNullApply(event.target.value, BestGlobals.date.iso));
                 }}
-                type="date" 
-                InputLabelProps={{ shrink: true }} 
-                label={title} 
+                type="date"
+                InputLabelProps={{ shrink: true }}
+                label={title}
                 disabled={!editable}
                 title={toolTip}
-                variant={variant} 
+                variant={variant}
             />
         case 'decimal':
         case 'bigint':
-            return <TextField 
-                key={key} 
+            return <TextField
+                key={key}
                 className={`fp-fieldname-${name} ${classUpdated}`}
                 value={value == null ? '' : value}
                 onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
                     makeChange(ifNotNullApply(event.target.value, Number));
                 }}
-                type="number" 
-                InputLabelProps={{ shrink: value != null }} 
-                label={title} 
+                type="number"
+                InputLabelProps={{ shrink: value != null }}
+                label={title}
                 disabled={!editable}
                 title={toolTip}
-                variant={variant} 
+                variant={variant}
             />
-        default: 
-            if (typeName == 'text' && editable) {
+        default:
+            if (typeName === 'text' && editable) {
                 const options = props.getOptions()
+                // @ts-expect-error value can be not string
                 if (value != null && !options.includes(value)) { options.unshift(value) }
-                return <ComboBox 
+                return <ComboBox
                     key={key}
                     className={`fp-fieldname-${name} ${classUpdated}`}
                     value={value as string}
@@ -383,7 +385,7 @@ export function GenericField(props:GenericFieldProperties){
                     mobile={mobile}
                 />
             } else {
-                return <TextField 
+                return <TextField
                     key={key}
                     className={`fp-fieldname-${name} ${classUpdated}`}
                     value={value as string}
@@ -408,7 +410,7 @@ export function CardVerticalDisplay(props:{fieldsProps:GenericFieldProperties[]}
     </>
 }
 
-export function CardEditorConnected(props:{
+export function CardEditorConnected(props:{ // eslint-disable-line complexity
     table:string, fixedFields:FixedFields, conn:Connector,
     withMenu?:boolean,
     autoEdit?:boolean,
@@ -427,11 +429,11 @@ export function CardEditorConnected(props:{
     const [rows, setRows] = useState<RowType[]>([]);
     const [originalRow, setOriginalRow] = useState<RowType>({});
     const [editing, setEditing] = useState(props.autoEdit ?? false);
-    const [optionsInfo, setOptionsInfo] = useState<OptionsInfo>({chained: {}, relations: {}, tables:{}});    
+    const [optionsInfo, setOptionsInfo] = useState<OptionsInfo>({chained: {}, relations: {}, tables:{}});
     const [dirty, setDirty] = useState(false);
     const [error, setError] = useState<Error|null>(null);
     const [saving, setSaving] = useState(false);
-    const [primaryKeyValues, setPrimaryKeyValues] = useState<any[]>([])
+    const [primaryKeyValues, setPrimaryKeyValues] = useState<FieldTypes[]>([])
     const [message, setMessage] = useState("");
     const [position, setPosition] = useState<number>(props.startPosition ?? 0);
     const [count, setCount] = useState(0);
@@ -443,13 +445,13 @@ export function CardEditorConnected(props:{
         setDirty(false);
         setSaving(false);
         setCount(rows.length);
-        if (rows.length == 0) {
+        if (rows.length === 0) {
             status = 'new';
         }
-        const pos = status == 'new' ? rows.length + 1 : circular ? position = ((position - 1) % rows.length + rows.length) % rows.length + 1 : position > rows.length ? rows.length : position < 1 ? 1 : position;
+        const pos = status === 'new' ? rows.length + 1 : circular ? position = ((position - 1) % rows.length + rows.length) % rows.length + 1 : position > rows.length ? rows.length : position < 1 ? 1 : position;
         setPosition(pos);
-        const row = status == 'new' ? beingArray(tableDef.fields).build(fd => ({[fd.name]:null})).plain() : rows[pos - 1];
-        if (status == 'new') {
+        const row = status === 'new' ? beingArray(tableDef.fields).build(fd => ({[fd.name]:null})).plain() : rows[pos - 1];
+        if (status === 'new') {
             setRows([...rows, row]);
         } else {
             setRows(rows);
@@ -457,7 +459,7 @@ export function CardEditorConnected(props:{
         setPrimaryKeyValues(getPrimaryKeyValues(tableDef, row));
         setUpdatesToRow({});
         setOriginalRow(row);
-        if (status == 'new') setEditing(true);
+        if (status === 'new') setEditing(true);
         else if (!props.autoEdit) setEditing(false);
         setStatus(status)
     }
@@ -468,7 +470,7 @@ export function CardEditorConnected(props:{
         var firstPromise = conn.ajax.table_structure({table}).then(tableDef=>{setTableDef(tableDef); return tableDef})
         Promise.all([
             firstPromise,
-            conn.ajax.table_data({table, fixedFields, paramfun:{}}).then(function(rows){
+            conn.ajax.table_data({table, fixedFields, paramfun:{}}).then(async function(rows){
                 return firstPromise.then((tableDef:TableDefinition)=>{
                     setRowsAndPosition(tableDef, rows, position, 'update', true)
                 })
@@ -490,7 +492,7 @@ export function CardEditorConnected(props:{
                 status
             }).then((result)=>{
                 var newRow = result.row;
-                var newRows = rows.map(r => r == originalRow ? newRow : r);
+                var newRows = rows.map(r => r === originalRow ? newRow : r);
                 setRowsAndPosition(tableDef, newRows, position, 'update', false)
             }).catch(function(err){
                 setMessage(err.message);
@@ -499,7 +501,7 @@ export function CardEditorConnected(props:{
     }, [saving])
     console.log("===============");
     console.log(JSON.stringify(updatesToRow))
-    const lists = (name:string, row:RowType) => {
+    const lists = (name:string, row:RowType) => { // eslint-disable-line complexity
         var info = optionsInfo?.chained?.[name] ?? [];
         // @ts-expect-error
         var fieldDef:FieldDefinition = tableDef.field[name]!
@@ -543,15 +545,15 @@ export function CardEditorConnected(props:{
             noValidate
             autoComplete="off"
         >
-            <Button disabled = { dirty || status == 'new' || count <= 1} onClick={_ =>{ setRowsAndPosition(tableDef, rows, position && position - 1, 'update', false)} }><ICON.KeyboardArrowUp/></Button>
+            <Button disabled = { dirty || status === 'new' || count <= 1} onClick={_ =>{ setRowsAndPosition(tableDef, rows, position && position - 1, 'update', false)} }><ICON.KeyboardArrowUp/></Button>
             <Typography>{position == null ? 'NO' : position + '/' + count }</Typography>
-            <Button disabled = { dirty || status == 'new' || count <= 1} onClick={_ =>{ setRowsAndPosition(tableDef, rows, position && position + 1, 'update', false)} }><ICON.KeyboardArrowDown/></Button>
+            <Button disabled = { dirty || status === 'new' || count <= 1} onClick={_ =>{ setRowsAndPosition(tableDef, rows, position && position + 1, 'update', false)} }><ICON.KeyboardArrowDown/></Button>
             { props.autoEdit ? null :
-                <Button disabled = { status == 'new' || editing } title={"Editar"} onClick={_ => setEditing(true) }>
+                <Button disabled = { status === 'new' || editing } title={"Editar"} onClick={_ => setEditing(true) }>
                     { dirty ? <ICON.Redo/> : <ICON.Edit/>}
                 </Button>
             }
-            <Button disabled = { dirty || status == 'new' } title={"Agregar"} onClick={_ =>{ setRowsAndPosition(tableDef, rows, 0, 'new', false)} }><ICON.AddCircleOutlineRounded/></Button>
+            <Button disabled = { dirty || status === 'new' } title={"Agregar"} onClick={_ =>{ setRowsAndPosition(tableDef, rows, 0, 'new', false)} }><ICON.AddCircleOutlineRounded/></Button>
             { dirty && (!editing || props.autoEdit) ?
                 <Button color="error" title={"Undo"} onClick={_ =>{ onRowChange(originalRow); setSaving(true);  } }><ICON.Undo/></Button>
             : null}
@@ -567,13 +569,13 @@ export function CardEditorConnected(props:{
         >
             {(()=>{
                 const forEdit = !saving && editing;
-                const fieldsDef = tableDef.fields; 
+                const fieldsDef = tableDef.fields;
                 const newRow = {...originalRow, ...updatesToRow};
                 console.log('=============')
                 console.log(JSON.stringify(newRow))
-                var fieldsProps = fieldsDef.map((fd) => { 
+                var fieldsProps = fieldsDef.map((fd) => {
                     var {name} = fd;
-                    const makeChange = (newValue: any) => {
+                    const makeChange = (newValue: FieldTypes) => {
                         var newUpdatesToRow = {...updatesToRow}
                         if (BestGlobals.sameValue(newValue, originalRow[name] ?? null)){
                             delete newUpdatesToRow[name];
@@ -590,8 +592,8 @@ export function CardEditorConnected(props:{
                 return <CardDisplay fieldsProps={fieldsProps} optionsInfo={optionsInfo}/>
             })()}
             <div style={{display: "flex", flexDirection: "row", justifyContent: "space-between"}}>
-                { props.autoEdit ? null : 
-                <Button 
+                { props.autoEdit ? null :
+                <Button
                     key={"$ button cancel"}
                     onClick={() => setEditing(false)}
                     disabled={!(editing && dirty && !saving)}
@@ -600,9 +602,9 @@ export function CardEditorConnected(props:{
                 >
                     cancel
                 </Button>}
-                <Button 
+                <Button
                     key={"$ button save"}
-                    startIcon={saving ? <CircularProgress size={20} /> : <ICON.Save/>} 
+                    startIcon={saving ? <CircularProgress size={20} /> : <ICON.Save/>}
                     disabled={!dirty || saving}
                     onClick={()=>{
                         setSaving(true);
@@ -617,14 +619,14 @@ export function CardEditorConnected(props:{
 }
 
 class CaptureError extends React.Component<
-    {children:any},
-    {hasError:boolean, error:Error|{message:string}, info?:any}
+    {children:React.ReactNode},
+    {hasError:boolean, error:Error|{message:string}, info?:React.ErrorInfo}
 >{
-    constructor(props:{children:any}) {
+    constructor(props:{children:React.ReactNode}) {
         super(props);
         this.state = { hasError: false, error:{message:''} };
     }
-    override componentDidCatch(error:Error, info:any){
+    override componentDidCatch(error:Error, info:React.ErrorInfo){
         if (localStorage.skipErrorCapture) {
             console.error("localStorage.skipErrorCapture=true. Error");
             console.error(error);
@@ -713,7 +715,7 @@ export function renderCardEditor(
     opts?:{withMenu: boolean}
 ){
     const {withMenu} = opts || {};
-    renderConnectedApp(conn, addrParams, layout, 
+    renderConnectedApp(conn, addrParams, layout,
         ({table, fixedFields, conn}) => CardEditorConnected({table, fixedFields, conn, CardDisplay:CardVerticalDisplay, withMenu})
     )
 }
@@ -724,9 +726,9 @@ export function renderCardEditorLegacy(
     layout: HTMLElement
 ){
     if (addrParams.ff instanceof Array) {
-        var fixedFields:any = addrParams.ff;
+        var fixedFields:FixedFields = addrParams.ff;
     } else {
-        var fixedFields:any = likeAr(addrParams.ff).map(function(value, key){ return {fieldName:key, value:value}; }).array();
+        var fixedFields:FixedFields = likeAr(addrParams.ff).map(function(value, key){ return {fieldName:key, value:value}; }).array();
     }
     if (!conn.ajax.option_lists) {
         throw new Error("falta conn.ajax.option_lists en renderCardEditor");
@@ -737,5 +739,3 @@ export function renderCardEditorLegacy(
         </CaptureError>
     )
 }
-
-
